@@ -1,1 +1,167 @@
-# Deniz
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deniz Catcher Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #ui {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        canvas {
+            background: #222;
+            border: 2px solid #ff007f;
+            box-shadow: 0 0 20px rgba(255, 0, 127, 0.5);
+            touch-action: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">Score: <span id="score">0</span> | HP: 1 ❤️</div>
+    <canvas id="gameCanvas" width="360" height="540"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreEl = document.getElementById("score");
+
+        let score = 0;
+        let isGameOver = false;
+
+        // Deniz (Player)
+        let deniz = {
+            x: canvas.width / 2 - 35,
+            y: canvas.height - 70,
+            width: 70,
+            height: 50,
+            speed: 8,
+            dx: 0
+        };
+
+        // Falling items
+        let items = [];
+        let spawnTimer = 0;
+
+        // Keyboard Controls (PC)
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft" || e.key === "a") deniz.dx = -deniz.speed;
+            if (e.key === "ArrowRight" || e.key === "d") deniz.dx = deniz.speed;
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if ((e.key === "ArrowLeft" || e.key === "a") && deniz.dx < 0) deniz.dx = 0;
+            if ((e.key === "ArrowRight" || e.key === "d") && deniz.dx > 0) deniz.dx = 0;
+        });
+
+        // Touch Controls (Mobile / iPhone)
+        canvas.addEventListener("touchmove", (e) => {
+            let rect = canvas.getBoundingClientRect();
+            let touchX = e.touches[0].clientX - rect.left;
+            deniz.x = touchX - deniz.width / 2;
+        });
+
+        function spawnItem() {
+            items.push({
+                x: Math.random() * (canvas.width - 30),
+                y: -30,
+                width: 30,
+                height: 45,
+                speed: 3.5 + Math.random() * 2.5
+            });
+        }
+
+        function update() {
+            if (isGameOver) return;
+
+            // Move Deniz & Keep inside screen bounds
+            deniz.x += deniz.dx;
+            if (deniz.x < 0) deniz.x = 0;
+            if (deniz.x + deniz.width > canvas.width) deniz.x = canvas.width - deniz.width;
+
+            // Spawn items
+            spawnTimer++;
+            if (spawnTimer > 35) {
+                spawnItem();
+                spawnTimer = 0;
+            }
+
+            // Update items
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                item.y += item.speed;
+
+                // Collision with Deniz
+                if (
+                    item.x < deniz.x + deniz.width &&
+                    item.x + item.width > deniz.x &&
+                    item.y + item.height > deniz.y &&
+                    item.y < deniz.y + deniz.height
+                ) {
+                    score++;
+                    scoreEl.innerText = score;
+                    items.splice(i, 1);
+                } 
+                // Missed item -> Game Over because Deniz has only 1 HP!
+                else if (item.y > canvas.height) {
+                    isGameOver = true;
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Deniz (Mouth open)
+            ctx.fillStyle = "#ff007f";
+            ctx.fillRect(deniz.x, deniz.y, deniz.width, deniz.height);
+            ctx.fillStyle = "white";
+            ctx.font = "14px Arial";
+            ctx.fillText("🗣️ Deniz", deniz.x + 8, deniz.y + 30);
+
+            // Draw Falling Items (Neon cyan capsules)
+            ctx.fillStyle = "#00ffff";
+            for (let item of items) {
+                ctx.beginPath();
+                ctx.roundRect(item.x, item.y, item.width, item.height, 15);
+                ctx.fill();
+            }
+
+            // Game Over Screen
+            if (isGameOver) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "red";
+                ctx.font = "26px Arial";
+                ctx.fillText("GAME OVER", canvas.width / 2 - 75, canvas.height / 2 - 10);
+                ctx.fillStyle = "white";
+                ctx.font = "14px Arial";
+                ctx.fillText("Verfehlt! Deniz hat nur 1 HP.", canvas.width / 2 - 85, canvas.height / 2 + 25);
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>
